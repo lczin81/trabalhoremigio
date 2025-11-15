@@ -36,34 +36,38 @@ ENTRY_LIST = JSON.parse(localStorage.getItem("entry_list")) || [];
 updateUI();
 
 //EVENT LISTENERS
-expenseBtn.addEventListener("click", function () {
+expenseBtn?.addEventListener("click", function () {
   show(expenseEl);
   hide([incomeEl, allEl]);
   active(expenseBtn);
   inactive([incomeBtn, allBtn]);
 });
-incomeBtn.addEventListener("click", function () {
+
+incomeBtn?.addEventListener("click", function () {
   show(incomeEl);
   hide([expenseEl, allEl]);
   active(incomeBtn);
   inactive([expenseBtn, allBtn]);
 });
-allBtn.addEventListener("click", function () {
+
+allBtn?.addEventListener("click", function () {
   show(allEl);
   hide([incomeEl, expenseEl]);
   active(allBtn);
   inactive([incomeBtn, expenseBtn]);
 });
 
-addExpense.addEventListener("click", function () {
-  // CHECK IF ONE OF THE INPUT IS EMPTY => EXIT
+addExpense?.addEventListener("click", function () {
   if (!expenseTitle.value || !expenseAmount.value) return;
 
-  // ADD INPUTs TO ENTRY_LIST
+  const amountNumber = +expenseAmount.value.replace(",", ".");
+
+  if (isNaN(amountNumber)) return;
+
   let expense = {
     type: "expense",
     title: expenseTitle.value,
-    amount: +expenseAmount.value,
+    amount: amountNumber,
   };
   ENTRY_LIST.push(expense);
 
@@ -71,45 +75,54 @@ addExpense.addEventListener("click", function () {
   clearInput([expenseTitle, expenseAmount]);
 });
 
-addIncome.addEventListener("click", function () {
-  // CHECK IF ONE OF THE INPUT IS EMPTY => EXIT
+addIncome?.addEventListener("click", function () {
   if (!incomeTitle.value || !incomeAmount.value) return;
 
-  // ADD INPUTs TO ENTRY_LIST
-  let income = {
+  const amountNumber = +incomeAmount.value.replace(",", ".");
+
+  if (isNaN(amountNumber)) return;
+
+  let incomeObj = {
     type: "income",
     title: incomeTitle.value,
-    amount: +incomeAmount.value,
+    amount: amountNumber,
   };
-  ENTRY_LIST.push(income);
+  ENTRY_LIST.push(incomeObj);
 
   updateUI();
   clearInput([incomeTitle, incomeAmount]);
 });
 
-incomeList.addEventListener("click", deleteOrEdit);
-expenseList.addEventListener("click", deleteOrEdit);
-allList.addEventListener("click", deleteOrEdit);
+incomeList?.addEventListener("click", deleteOrEdit);
+expenseList?.addEventListener("click", deleteOrEdit);
+allList?.addEventListener("click", deleteOrEdit);
 
-// HELEPER FUNCS
+// HELPER FUNCS
 function deleteOrEdit(event) {
-  const targetBtn = event.target;
-  const entry = targetBtn.parentNode;
+  const target = event.target;
+  const action = target.id || target.closest("div")?.id;
+  const entryEl = target.closest("li");
 
-  if (targetBtn.id == EDIT) {
-    editEntry(entry);
-  } else if (targetBtn.id == DELETE) {
-    deleteEntry(entry);
+  if (!entryEl || !action) return;
+
+  if (action === EDIT) {
+    editEntry(entryEl);
+  } else if (action === DELETE) {
+    deleteEntry(entryEl);
   }
 }
 
 function deleteEntry(entry) {
-  ENTRY_LIST.splice(entry.id, 1);
+  const index = parseInt(entry.id, 10);
+  if (isNaN(index)) return;
+  ENTRY_LIST.splice(index, 1);
   updateUI();
 }
 
 function editEntry(entry) {
-  const ENTRY = ENTRY_LIST[entry.id];
+  const index = parseInt(entry.id, 10);
+  if (isNaN(index)) return;
+  const ENTRY = ENTRY_LIST[index];
 
   if (ENTRY.type == "income") {
     incomeTitle.value = ENTRY.title;
@@ -128,10 +141,10 @@ function updateUI() {
 
   let sign = income >= outcome ? "$" : "-$";
 
-  //UPDATE UI
-  balanceEl.innerHTML = `<small>${sign}</small>${balance}`;
-  outcomeTotalEl.innerHTML = `<small>$</small>${outcome}`;
-  incomeTotalEl.innerHTML = `<small>$</small>${income}`;
+  //UPDATE UI (usar template literals)
+  balanceEl && (balanceEl.innerHTML = `<small>${sign}</small>${balance.toFixed(2)}`);
+  outcomeTotalEl && (outcomeTotalEl.innerHTML = `<small>$</small>${outcome.toFixed(2)}`);
+  incomeTotalEl && (incomeTotalEl.innerHTML = `<small>$</small>${income.toFixed(2)}`);
 
   clearElement([expenseList, incomeList, allList]);
 
@@ -143,13 +156,15 @@ function updateUI() {
     }
     showEntry(allList, entry.type, entry.title, entry.amount, index);
   });
-  updateChart(income, outcome);
+  // se tiver função updateChart, mantém; senão comente/remova
+  if (typeof updateChart === "function") updateChart(income, outcome);
   localStorage.setItem("entry_list", JSON.stringify(ENTRY_LIST));
 }
 
 function showEntry(list, type, title, amount, id) {
+  if (!list) return;
   const entry = `<li id="${id}" class="${type}">
-                    <div class="entry">${title} : $${amount}</div>
+                    <div class="entry">${escapeHtml(title)} : $${amount.toFixed(2)}</div>
                     <div id="edit"></div>
                     <div id="delete"></div>
                   </li>`;
@@ -159,7 +174,7 @@ function showEntry(list, type, title, amount, id) {
 
 function clearElement(elements) {
   elements.forEach((element) => {
-    element.innerHTML = "";
+    if (element) element.innerHTML = "";
   });
 }
 
@@ -167,7 +182,7 @@ function calculateTotal(type, list) {
   let sum = 0;
   list.forEach((entry) => {
     if (entry.type == type) {
-      sum += entry.amount;
+      sum += Number(entry.amount) || 0;
     }
   });
   return sum;
@@ -176,27 +191,39 @@ function calculateTotal(type, list) {
 function calculateBalance(income, outcome) {
   return income - outcome;
 }
+
 function clearInput(inputs) {
   inputs.forEach((input) => {
-    input.value = "";
+    if (input) input.value = "";
   });
 }
 
 function show(element) {
-  element.classList.remove("hide");
+  if (element) element.classList.remove("hide");
 }
 
 function hide(elements) {
   elements.forEach((element) => {
-    element.classList.add("hide");
+    if (element) element.classList.add("hide");
   });
 }
 
 function active(element) {
-  element.classList.add("focus");
+  if (element) element.classList.add("focus");
 }
+
 function inactive(elements) {
   elements.forEach((element) => {
     element.classList.remove("focus");
   });
+}
+
+// pequena função para evitar injeção de HTML nos títulos
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }
